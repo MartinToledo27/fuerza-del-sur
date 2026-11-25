@@ -247,11 +247,17 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:'Courier New',mon
  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 4%,#000 78%,transparent 100%),linear-gradient(to right,transparent 0,#000 4%,#000 96%,transparent 100%);-webkit-mask-composite:source-in;
  mask-image:linear-gradient(to bottom,transparent 0,#000 4%,#000 78%,transparent 100%),linear-gradient(to right,transparent 0,#000 4%,#000 96%,transparent 100%);mask-composite:intersect}
 #s1 .big{position:relative;z-index:2}
+
+.pesb{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;background:#14206a;border:1px solid #d8a93a;border-radius:11px;font-weight:bold;color:#ffe9a0;white-space:nowrap;font-size:13px;flex:none}
+#hd .pesb{margin-left:6px}#lvn{margin-left:auto}
+.pesb.bump{animation:pbump .4s}@keyframes pbump{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+.rvl{display:flex;flex-direction:column;gap:8px;margin:10px 0;max-height:40vh;overflow:auto}.rvr{display:flex;align-items:center;gap:10px}.rvr img{height:42px;image-rendering:pixelated}.rvr span{flex:1;text-align:left;font-weight:bold}
+.pm{font-size:12px;opacity:.85;margin:6px 0 0}.pn[disabled]{opacity:.5;cursor:default;filter:grayscale(.4)}
 </style>
 </head>
 <body>
 <div id="app">
-<header id="hd"><div class="pn" id="pf"></div><div class="pn" id="ow"><span>Orden</span><div id="ord"></div></div><div id="lvn"></div></header>
+<header id="hd"><div class="pn" id="pf"></div><div class="pn" id="ow"><span>Orden</span><div id="ord"></div></div><div id="lvn"></div><div id="pes" class="pesb"></div></header>
 <div id="mid">
 <div id="lc"><aside id="party"></aside><div id="dp"><button class="k up" data-d="0,-1">▲</button><button class="k lf" data-d="-1,0">◀</button><button class="k rt" data-d="1,0">▶</button><button class="k dn" data-d="0,1">▼</button></div></div>
 <div id="mw"><div id="m"><div id="world"><canvas id="cv" width="160" height="128"></canvas><div id="ov"></div><div id="cl"></div><div id="ul"></div><div id="fl"></div><div id="cur"></div></div><div class="pn" id="pu"></div><div id="lu" onclick="ok()"></div></div></div>
@@ -263,7 +269,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:'Courier New',mon
 <div id="end"></div>
 <div id="scr">
 <section class="sv on" id="s1"><div id="cvr"><img id="cover" alt="Fuerza Sur"></div><button class="pn big" onclick="show('s3');renderSel()">COMENZAR</button></section>
-<section class="sv" id="s3"><div class="top3"><h2>FUERZA SUR</h2><button class="pn q" onclick="howOpen()">? Cómo jugar</button></div>
+<section class="sv" id="s3"><div class="top3"><h2>FUERZA SUR</h2><span id="pes3" class="pesb"></span><button class="pn q" onclick="howOpen()">? Cómo jugar</button></div>
 <div class="sb"><div id="sm"></div><div id="sr"><div id="sg"></div><div class="pn" id="sd"></div></div></div>
 <div class="sf"><span id="sc"></span><button class="pn big" id="gob" onclick="startCampaign()">¡A LUCHAR!</button></div></section>
 </div>
@@ -277,6 +283,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:'Courier New',mon
 <li><b>Efecto Piso:</b> algunos terrenos dan defensa extra. Árboles, rocas y agua bloquean, salvo para los que vuelan.</li>
 <li><b>Experiencia:</b> ganás por el daño que hacés, por curar y por bendecir, y +15 por cada enemigo derrotado. Los niveles valen solo para esa partida: cada modo arranca de nuevo en nivel 1.</li>
 <li><b>Estados:</b> ☠ veneno, ♦ sangrado, ⚡ parálisis, ✦ bendición.</li>
+<li><b>Pesos 🪙:</b> ganás 2 por enemigo, 5 por jefe y 1 por cofre, y se guardan. Sirven para revivir a los caídos (5 🪙 cada uno) antes del escenario 2 y 3, y para reintentar tras una derrota (15 🪙).</li>
 <li><b>Compañeros:</b> se rescatan al vencer al jefe del Reto diario, una vez por día.</li>
 <li><b>Mapa:</b> en los escenarios grandes la cámara sigue al cursor.</li>
 <li><b>Celular:</b> jugalo en vertical, con la cruceta y los botones A y B.</li>
@@ -433,6 +440,24 @@ function genMapV(tk,w,h,R){
  }
  return Array.from({length:h},(_,y)=>tk=='mar'?(y>=h*.4?'.':'~').repeat(w):('#'.repeat(3)+'....'+'#'.repeat(3)).slice(0,w).padEnd(w,'#'));
 }
+const REV=5,RETRY=15;let RV=new Set(),RVF=[],rvOpen=false;
+function pes(){try{const v=parseInt(localStorage.getItem('fds_pes'),10);return isNaN(v)||v<0?0:v;}catch(e){return 0;}}
+function setPes(n){try{localStorage.setItem('fds_pes',String(Math.max(0,n)));}catch(e){}pesUI();}
+function addPes(n){setPes(pes()+n);}
+function pesUI(){const t='🪙 '+pes();for(const id of ['pes','pes3']){const e=$(id);if(e){e.textContent=t;e.classList.remove('bump');void e.offsetWidth;e.classList.add('bump');}}}
+function showRevive(){
+ const F=HERO.filter(h=>h.hp<=0);
+ if(!F.length){loadLevel(lvl+1,false);return;}
+ RV=new Set();RVF=F;rvOpen=true;renderRevive();
+}
+function renderRevive(){
+ const e=$('end');
+ e.innerHTML='<div class="pn ec"><h2>¿REVIVIR?</h2><p>Cayeron en combate. Revivir a cada uno cuesta '+REV+' 🪙. Tenés <b>'+pes()+' 🪙</b>.</p><div class="rvl">'+RVF.map((h,i)=>'<div class="rvr"><img src="'+h.src+'"><span>'+h.n+'</span><button class="pn" '+(RV.has(h)||pes()<REV?'disabled':'')+' onclick="revive('+i+')">'+(RV.has(h)?'✓ Revivido':'Revivir · '+REV+' 🪙')+'</button></div>').join('')+'</div><div class="eb"><button class="pn big" onclick="goNext()">SEGUIR ▶</button></div></div>';
+ e.style.display='flex';
+}
+function revive(i){const h=RVF[i];if(!h||RV.has(h)||pes()<REV)return;setPes(pes()-REV);RV.add(h);renderRevive();}
+function goNext(){if(!rvOpen)return;HERO.forEach(h=>{h.out=h.hp<=0&&!RV.has(h);});rvOpen=false;$('end').style.display='none';loadLevel(lvl+1,false);}
+function restart0(){rvOpen=false;$('end').style.display='none';startCampaign();}
 function winText(){const b=U.some(u=>u.boss&&u.hp<=0);return lvl<2?'🏆 ¡Escenario superado! Seguí con el próximo.':(b?'🏆 ¡El jefe cayó y sus secuaces huyen! Modo completado.':'🏆 ¡Modo completado!');}
 const pick=h=>({mhp:h.mhp,atk:h.atk,def:h.def,mmp:h.mmp,lv:h.lv,xp:h.xp});
 const DEF=['martin','delfina','bruno','julieta'],ORD=['silvana','roberto','silvia','nicolas','silvi','locu','laure','matias','alexis','valentina'];
@@ -486,7 +511,7 @@ function pickHero(id){
  if(loadUn().includes(id)){if(SELS.includes(id))SELS=SELS.filter(x=>x!=id);else if(SELS.length<8)SELS.push(id);}
  renderSel();
 }
-function menu(){started=false;SELM=null;$('end').style.display='none';$('scr').style.display='flex';show('s3');renderSel();}
+function menu(){rvOpen=false;started=false;SELM=null;$('end').style.display='none';$('scr').style.display='flex';show('s3');renderSel();}
 function startCampaign(){
  if(!SELM||(SELM=='daily'&&dailyDone())||SELS.length<4||SELS.length>8||!CAPID)return;
  const dm=dailyMode(),dk=todayKey();
@@ -500,9 +525,10 @@ function startCampaign(){
 function initScreens(){$('cover').src=IMG.cover;show('s1');}
 function endUI(){
  const e=$('end');
+ if(rvOpen)return;
  if(!over||luOpen||fxWait){e.style.display='none';return;}
  const R2=resc?HD.find(h=>h.id==resc):null,fin=won&&lvl==2;
- e.innerHTML='<div class="pn ec"><h2>'+(won?(fin?'¡MODO COMPLETADO!':'¡ESCENARIO SUPERADO!'):'DERROTA')+'</h2><p>'+(won?winText():(CAPT?'El capitán '+CAPT.n+' ha caído.':''))+'</p>'+(R2?'<div class="rs"><img src="'+R2.src+'"><div><b>¡Rescataron a '+R2.n+'!</b><span>Estaba prisionero en la sala del jefe.</span></div></div>':(fin&&MODE.id=='daily'?'<p>Reto del día completado.</p>':''))+'<div class="eb"><button class="pn big" onclick="again()">'+(won?(fin?'VOLVER AL MENÚ':'CONTINUAR ▶'):'REINTENTAR')+'</button>'+(won?'':'<button class="pn" onclick="menu()">MENÚ</button>')+'</div></div>';
+ e.innerHTML='<div class="pn ec"><h2>'+(won?(fin?'¡MODO COMPLETADO!':'¡ESCENARIO SUPERADO!'):'DERROTA')+'</h2><p>'+(won?winText():(CAPT?'El capitán '+CAPT.n+' ha caído.':''))+'</p>'+(R2?'<div class="rs"><img src="'+R2.src+'"><div><b>¡Rescataron a '+R2.n+'!</b><span>Estaba prisionero en la sala del jefe.</span></div></div>':(fin&&MODE.id=='daily'?'<p>Reto del día completado.</p>':''))+'<div class="eb"><button class="pn big" onclick="again()"'+(!won&&pes()<RETRY?' disabled':'')+'>'+(won?(fin?'VOLVER AL MENÚ':'CONTINUAR ▶'):'REINTENTAR · '+RETRY+' 🪙')+'</button>'+(won?'':'<button class="pn" onclick="restart0()">EMPEZAR DE CERO</button><button class="pn" onclick="menu()">MENÚ</button>')+'</div>'+(won?'':'<p class="pm">Tenés '+pes()+' 🪙'+(pes()<RETRY?' · no alcanza para reintentar':'')+'</p>')+'</div>';
  e.style.display='flex';
 }
 function loadLevel(n,retry){
@@ -510,7 +536,7 @@ function loadLevel(n,retry){
  const tk=MODE.th,R=rng(SEEDS[n]);PAL=PALS[tk];CC=CCS[tk];MAP=(V?genMapV:genMap)(tk,W,H,R);
  HERO.forEach(h=>{if(h.bf){h.atk-=h.bf.a;h.def-=h.bf.d;}h.bf=null;h.par=0;h.psn=0;h.bld=0;});
  if(retry)HERO.forEach((h,i)=>Object.assign(h,SN[i]));
- HERO.forEach(h=>{h.hp=h.mhp;h.mp=h.mmp;h.dead=false;h.agg=0;});
+ HERO.forEach(h=>{if(!n&&!retry)h.out=false;h.hp=h.out?0:h.mhp;h.mp=h.out?0:h.mmp;h.dead=!!h.out;h.pre=!!h.out;h.agg=0;});
  if(!retry)SN=HERO.map(pick);
  const used=new Set(),mid=H>>1;
  const free=f=>{const a=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(!blocked(x,y)&&!used.has(K(x,y))&&f(x,y))a.push([x,y]);return a;};
@@ -543,8 +569,9 @@ function loadLevel(n,retry){
  logs=['¡'+MODE.n+' — escenario '+(n+1)+' ('+STN[n]+')!'];LUQ=[];luOpen=false;buildParty();paint();startRound();
  setTimeout(()=>{wd.style.transition='';},60);
 }
-function again(){if(won&&lvl<2)loadLevel(lvl+1,false);else if(won)menu();else loadLevel(lvl,true);}
+function again(){if(rvOpen)return;if(won&&lvl<2)showRevive();else if(won)menu();else{if(pes()<RETRY)return;setPes(pes()-RETRY);loadLevel(lvl,true);}}
 function openChest(c,u){
+ setTimeout(()=>{addPes(1);pop(c.x,c.y,'+1 🪙','lv');},450);
  c.open=true;c.el.firstChild.src=CHI[1];
  if(c.t=='mp'){for(const h of U)if(h.team=='p'&&h.hp>0&&h.mmp>0){const n=h.mmp-h.mp;h.mp=h.mmp;if(n>0)pop(h.x,h.y,'+'+n+' PM','mp');}say('🧰 Elixir de maná: todos recuperan su maná.');}
  else{const CL=c.t=='sword'?['kn','ro','al']:['wr','bu'],w=U.find(h=>h.team=='p'&&h.hp>0&&CL.includes(h.cls))||u;w.atk+=c.b;pop(w.x,w.y,'+'+c.b+' ATQ','lv');say('🧰 '+c.nm+': '+w.n+' gana +'+c.b+' de ataque.');}
@@ -869,7 +896,7 @@ function cam(){
 }
 function draw(){
  cam();
- for(const u of U){const d=u.el;if(u.hp<=0&&!u.dead){u.dead=true;deathFx(u);}if(u.lx!==u.x||u.ly!==u.y){if(u.team=='e'&&u.x!=u.lx)d.style.setProperty('--f',(u.x>u.lx?-1:1)*(u.fr?-1:1));d.classList.add('walk');setTimeout(()=>d.classList.remove('walk'),240);u.lx=u.x;u.ly=u.y;}d.style.left=u.x*CWn+'%';d.style.top=u.y*CHn+'%';d.style.zIndex=u.y+2+(u===sel?1:0);d.style.opacity=u.hp>0?1:0;d.classList.toggle('dying',!!u.dead);d.classList.toggle('d',u.done&&u.team=='p');d.classList.toggle('psn',u.psn>0&&u.hp>0);d.classList.toggle('bld',u.bld>0&&u.hp>0);d.classList.toggle('par',u.par>0&&u.hp>0);d.lastChild.firstChild.style.width=100*u.hp/u.mhp+'%';}
+ for(const u of U){const d=u.el;if(u.hp<=0&&!u.dead){u.dead=true;deathFx(u);if(u.team=='e'){const g=u.boss?5:2;addPes(g);pop(u.x,u.y,'+'+g+' 🪙','lv');}}if(u.lx!==u.x||u.ly!==u.y){if(u.team=='e'&&u.x!=u.lx)d.style.setProperty('--f',(u.x>u.lx?-1:1)*(u.fr?-1:1));d.classList.add('walk');setTimeout(()=>d.classList.remove('walk'),240);u.lx=u.x;u.ly=u.y;}d.style.left=u.x*CWn+'%';d.style.top=u.y*CHn+'%';d.style.zIndex=u.y+2+(u===sel?1:0);d.style.opacity=u.hp>0?1:0;d.classList.toggle('dying',!!u.dead&&!u.pre);d.classList.toggle('d',u.done&&u.team=='p');d.classList.toggle('psn',u.psn>0&&u.hp>0);d.classList.toggle('bld',u.bld>0&&u.hp>0);d.classList.toggle('par',u.par>0&&u.hp>0);d.lastChild.firstChild.style.width=100*u.hp/u.mhp+'%';}
  [...$('ov').children].forEach((c,i)=>c.className=hl.get(K(i%W,Math.floor(i/W)))||'');
  $('cur').style.left=cx*CWn+'%';$('cur').style.top=cy*CHn+'%';$('cur').style.display=busy?'none':'';
  const bt=$('bt');bt.innerHTML='';bt.className=mode=='skillmenu'&&!over&&!busy&&!luOpen?'sk':'';$('ft').classList.toggle('sk',bt.className=='sk');
@@ -886,6 +913,7 @@ function draw(){
  panels();partyUpd();endUI();
 }
 const KM={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+pesUI();
 document.onkeydown=e=>{
  if(!started)return;
  const k=e.key.length==1?e.key.toLowerCase():e.key,m=KM[k];
